@@ -152,23 +152,37 @@ class GsCommitViewDoCommitCommand(TextCommand, GitCommand):
 
         show_panel_overrides = \
             sublime.load_settings("GitSavvy.sublime-settings").get("show_panel_for")
+        cmd = ['git', 'commit']
+        if include_unstaged:
+            cmd.append('-a')
+        if self.view.settings().get("git_savvy.commit_view.amend"):
+            cmd.append('--amend')
+        cmd.append('-m')
+        cmd.append(commit_message)
+        args = {
+            'cmd': cmd,
+            'working_dir': self.repo_path
+        }
 
-        self.git(
-            "commit",
-            "-q" if "commit" not in show_panel_overrides else None,
-            "-a" if include_unstaged else None,
-            "--amend" if self.view.settings().get("git_savvy.commit_view.amend") else None,
-            "-F",
-            "-",
-            stdin=commit_message
-            )
+        self.view.window().run_command('exec', args)
+
+        # self.git(
+        #     "commit",
+        #     "-q" if "commit" not in show_panel_overrides else None,
+        #     "-a" if include_unstaged else None,
+        #     "--amend" if self.view.settings().get("git_savvy.commit_view.amend") else None,
+        #     "-F",
+        #     "-",
+        #     stdin=commit_message
+        #     )
 
         # ensure view is not already closed (i.e.: when "commit_on_close" enabled)
         is_commit_view = self.view.settings().get("git_savvy.commit_view")
         if is_commit_view and self.view.window():
-            self.view.window().focus_view(self.view)
-            self.view.set_scratch(True)  # ignore dirty on actual commit
-            self.view.window().run_command("close_file")
+            pass
+            # self.view.window().focus_view(self.view)
+            # self.view.set_scratch(True)  # ignore dirty on actual commit
+            # self.view.window().run_command("close_file")
         else:
             sublime.set_timeout_async(
                 lambda: util.view.refresh_gitsavvy(sublime.active_window().active_view()))
