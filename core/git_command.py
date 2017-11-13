@@ -96,6 +96,9 @@ class GitCommand(StatusMixin,
         if args[0] in close_panel_for:
             sublime.active_window().run_command("hide_panel", {"cancel": True})
 
+        log_stderr_for = savvy_settings.get("log_stderr_for") or []
+        log_stderr = args[0] in log_stderr_for
+
         stdout, stderr = None, None
 
         try:
@@ -127,8 +130,20 @@ class GitCommand(StatusMixin,
                                  cwd=working_dir,
                                  env=environ,
                                  startupinfo=startupinfo)
+
+            captured_stderr = b''
+            if log_stderr:
+                util.log.panel(command_str + "\n\n")
+                for line in p.stderr:
+                    captured_stderr = captured_stderr + line
+                    util.log.panel_append(line.decode())
+
             stdout, stderr = p.communicate(
                 (stdin.encode(encoding=stdin_encoding) if encode else stdin) if stdin else None)
+
+            if len(captured_stderr) > 0:
+                stderr = captured_stderr + stderr
+
             if decode:
                 stdout, stderr = self.decode_stdout(stdout, savvy_settings), stderr.decode()
 
