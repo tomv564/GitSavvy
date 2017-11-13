@@ -131,18 +131,29 @@ class GitCommand(StatusMixin,
                                  env=environ,
                                  startupinfo=startupinfo)
 
-            captured_stderr = b''
             if log_stderr:
+                captured_stderr = b''
                 util.log.panel(command_str + "\n\n")
+                if stdin:
+                    p.stdin.write(stdin.encode(encoding=stdin_encoding) if encode else stdin)
+                    p.stdin.flush()
+                    p.stdin.close()
+                    util.log.panel_append(stdin + "\n\n")
+
                 for line in p.stderr:
                     captured_stderr = captured_stderr + line
                     util.log.panel_append(line.decode())
 
-            stdout, stderr = p.communicate(
-                (stdin.encode(encoding=stdin_encoding) if encode else stdin) if stdin else None)
+                p.wait()
+                stderr = p.stderr.read()
+                stdout = p.stdout.read()
 
-            if len(captured_stderr) > 0:
-                stderr = captured_stderr + stderr
+                if len(captured_stderr) > 0:
+                    stderr = captured_stderr + stderr
+
+            else:
+                stdout, stderr = p.communicate(
+                    (stdin.encode(encoding=stdin_encoding) if encode else stdin) if stdin else None)
 
             if decode:
                 stdout, stderr = self.decode_stdout(stdout, savvy_settings), stderr.decode()
