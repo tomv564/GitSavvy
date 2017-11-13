@@ -98,6 +98,8 @@ class GitCommand(StatusMixin,
 
         log_stderr_for = savvy_settings.get("log_stderr_for") or []
         log_stderr = args[0] in log_stderr_for
+        log_stdout_for = savvy_settings.get("log_stdout_for") or []
+        log_stdout = args[0] in log_stdout_for
 
         stdout, stderr = None, None
 
@@ -131,8 +133,7 @@ class GitCommand(StatusMixin,
                                  env=environ,
                                  startupinfo=startupinfo)
 
-            if log_stderr:
-                captured_stderr = b''
+            if log_stderr or log_stdout:
                 util.log.panel(command_str + "\n\n")
                 if stdin:
                     p.stdin.write(stdin.encode(encoding=stdin_encoding) if encode else stdin)
@@ -140,16 +141,10 @@ class GitCommand(StatusMixin,
                     p.stdin.close()
                     util.log.panel_append(stdin + "\n\n")
 
-                for line in p.stderr:
-                    captured_stderr = captured_stderr + line
-                    util.log.panel_append(line.decode())
-
-                p.wait()
-                stderr = p.stderr.read()
-                stdout = p.stdout.read()
-
-                if len(captured_stderr) > 0:
-                    stderr = captured_stderr + stderr
+                if log_stderr:
+                    stdout, stderr = self.log_and_wait(p, p.stderr)
+                else:  # log_stdout
+                    stdout, stderr = self.log_and_wait(p, p.stdout)
 
             else:
                 stdout, stderr = p.communicate(
@@ -215,6 +210,25 @@ class GitCommand(StatusMixin,
                         sublime.error_message(FALLBACK_PARSE_ERROR_MSG)
                         raise fallback_err
                 raise unicode_err
+
+    def log_and_wait(self, process, pipe):
+        captured_output = b''
+
+        for line in pipe:
+            captured_output = captured_output + line
+            util.log.panel_append(line.decode())
+
+        process.wait()
+        stderr = process.stderr.read()
+        stdout = process.stdout.read()
+
+        if len(captured_output) > 0:
+            if pipe == process.stdout:
+                stdout = captured_output + stdout
+            else:
+                stderr = captured_output + stderr
+
+        return stdout, stderr
 
     @property
     def encoding(self):
