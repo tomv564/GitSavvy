@@ -24,7 +24,7 @@ class GsDisplayPanelCommand(TextCommand):
 class GsAppendPanelCommand(TextCommand):
 
     """
-    Given a `msg` string, find or open a transient text panel at the bottom of the
+    Given a `msg` string, find a transient text panel at the bottom of the
     active window, and append the `msg` contents there.
     """
 
